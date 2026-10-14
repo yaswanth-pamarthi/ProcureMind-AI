@@ -1,0 +1,30 @@
+[
+  {
+    "decision": "approve",
+    "rfq_id": "67318025-53ea-437e-977e-ec43018fa3d0",
+    "run_id": "6adcec1a-6dd1-412a-a1f9-6cfcd600a530",
+    "analysis_seconds": 18.2,
+    "model": "qwen3:1.7b",
+    "agents": 7,
+    "status": "APPROVED",
+    "recommended_vendor": "Beta",
+    "scores": [
+      {
+        "vendor": "Beta",
+        "score": 89.25,
+        "eligible": true
+      },
+      {
+        "vendor": "Alpha",
+        "score": 87.9,
+        "eligible": true
+      },
+      {
+        "vendor": "Gamma",
+        "score": 81.76,
+        "eligible": true
+      }
+    ],
+    "report_id": "ab0ad481-bf3d-49e1-9102-5dec5a77f40e"
+  }
+]

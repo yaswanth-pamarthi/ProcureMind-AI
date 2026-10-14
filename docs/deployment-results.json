@@ -1,0 +1,68 @@
+{
+  "checked_at": "2026-10-14T12:40:20.738053+00:00",
+  "url": "http://localhost:15173",
+  "api_docs": "http://localhost:15173/api/docs",
+  "health": {
+    "status": "ok",
+    "database": "postgresql",
+    "ai_mode": "ollama",
+    "model": "qwen3:1.7b"
+  },
+  "production_frontend": true,
+  "scope": "Local Docker deployment, not public cloud hosting",
+  "containers": [
+    {
+      "service": "api",
+      "health": "healthy",
+      "image": "procuremind-deployment-api",
+      "ports": "8000/tcp"
+    },
+    {
+      "service": "db",
+      "health": "healthy",
+      "image": "pgvector/pgvector:pg17",
+      "ports": "5432/tcp"
+    },
+    {
+      "service": "web",
+      "health": "healthy",
+      "image": "sha256:a7b7f4bb2b1173036dad26c31ac95f92d48b0f4a8def631e62264ab880cad6a6",
+      "ports": "127.0.0.1:15173->8080/tcp"
+    }
+  ],
+  "real_workflow": [
+    {
+      "decision": "approve",
+      "rfq_id": "67318025-53ea-437e-977e-ec43018fa3d0",
+      "run_id": "6adcec1a-6dd1-412a-a1f9-6cfcd600a530",
+      "analysis_seconds": 18.2,
+      "model": "qwen3:1.7b",
+      "agents": 7,
+      "status": "APPROVED",
+      "recommended_vendor": "Beta",
+      "scores": [
+        {
+          "vendor": "Beta",
+          "score": 89.25,
+          "eligible": true
+        },
+        {
+          "vendor": "Alpha",
+          "score": 87.9,
+          "eligible": true
+        },
+        {
+          "vendor": "Gamma",
+          "score": 81.76,
+          "eligible": true
+        }
+      ],
+      "report_id": "ab0ad481-bf3d-49e1-9102-5dec5a77f40e"
+    }
+  ],
+  "container_pytest": {
+    "passed": 39,
+    "skipped": 3,
+    "note": "Host-path auth fixtures skip inside container; all 79 tests passed in host test suite."
+  }
+}
