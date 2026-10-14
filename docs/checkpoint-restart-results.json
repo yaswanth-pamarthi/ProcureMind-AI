@@ -1,0 +1,10 @@
+{
+  "rfq_id": "a3286e3b-d09e-46f6-acd1-fc1b01547d23",
+  "run_id": "6d26dd88-8a04-4eac-ad13-eabb7798b43c",
+  "recommendation_id": "b13a1c5e-e7a3-4f28-b53f-26955400b32f",
+  "status_before_restart": "WAITING_APPROVAL",
+  "status_after_restart": "COMPLETED",
+  "agents": 7,
+  "report_id": "8f4df5d5-2666-4740-bdd4-23ff0a65cb8c",
+  "passed": true
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Alpha",
+    "quality": 95,
+    "compliance": "compliant"
+  },
+  {
+    "name": "Beta",
+    "quality": 80,
+    "compliance": "compliant"
+  },
+  {
+    "name": "Gamma",
+    "quality": 87,
+    "compliance": "conditional"
+  }
+]

@@ -1,0 +1,86 @@
+[
+  {
+    "decision": "override",
+    "rfq_id": "30c0a064-d2c3-4b05-9bbf-3535613befb8",
+    "run_id": "10547969-6458-4170-904b-9ec3601efaba",
+    "analysis_seconds": 34.45,
+    "model": "qwen3:1.7b",
+    "agents": 7,
+    "status": "OVERRIDDEN",
+    "recommended_vendor": "Beta",
+    "scores": [
+      {
+        "vendor": "Beta",
+        "score": 89.25,
+        "eligible": true
+      },
+      {
+        "vendor": "Alpha",
+        "score": 87.9,
+        "eligible": true
+      },
+      {
+        "vendor": "Gamma",
+        "score": 81.76,
+        "eligible": true
+      }
+    ],
+    "report_id": "4d02bfdb-585a-43d4-afeb-15c79b0d66e2"
+  },
+  {
+    "decision": "reject",
+    "rfq_id": "86c7fb7a-df5f-4bac-95af-48add70ef03b",
+    "run_id": "4b610aab-615d-4fc9-b4e0-4b7ab20c6582",
+    "analysis_seconds": 34.3,
+    "model": "qwen3:1.7b",
+    "agents": 7,
+    "status": "REJECTED",
+    "recommended_vendor": "Beta",
+    "scores": [
+      {
+        "vendor": "Beta",
+        "score": 89.25,
+        "eligible": true
+      },
+      {
+        "vendor": "Alpha",
+        "score": 87.9,
+        "eligible": true
+      },
+      {
+        "vendor": "Gamma",
+        "score": 81.76,
+        "eligible": true
+      }
+    ],
+    "report_id": "7c192d5d-334f-4e98-b57c-14ec097d99cd"
+  },
+  {
+    "decision": "approve",
+    "rfq_id": "c1b754df-d2e7-4c54-b5b3-a024f2219ad6",
+    "run_id": "236c777a-a243-4ead-99a0-c2932074b43e",
+    "analysis_seconds": 22.25,
+    "model": "qwen3:1.7b",
+    "agents": 7,
+    "status": "APPROVED",
+    "recommended_vendor": "Beta",
+    "scores": [
+      {
+        "vendor": "Beta",
+        "score": 89.25,
+        "eligible": true
+      },
+      {
+        "vendor": "Alpha",
+        "score": 87.9,
+        "eligible": true
+      },
+      {
+        "vendor": "Gamma",
+        "score": 81.76,
+        "eligible": true
+      }
+    ],
+    "report_id": "0883581b-672e-4ff5-a056-01a7b4dd28ac"
+  }
+]

@@ -1,0 +1,884 @@
+ProcureMind AI
+Enterprise Multi-Agent Procurement Intelligence Platform
+Complete implementation blueprint: concepts, justifications, architecture, setup, build, execution, testing and demonstration
+Target machine: Windows 11, Intel Core i5 12th Gen, NVIDIA RTX 3050Cost target: zero paid APIs and zero paid cloud servicesPrepared: 21 July 2026Document status: Implementation-ready MVP plan
+Important scope statement
+This guide is designed for a high-quality local MVP. It uses enterprise design concepts but intentionally avoids paid cloud dependencies, autonomous high-risk actions and infrastructure that cannot be justified on a single laptop.
+
+Document contents
+Use this as the reading sequence. The document is intentionally ordered from business understanding to implementation and finally execution.
+1.  Purpose, outcome and scope
+2.  Business process and user journeys
+3.  Concept catalogue with justifications
+4.  Functional and non-functional requirements
+5.  System and agent architecture
+6.  Document intelligence and RAG pipeline
+7.  Data model and scoring design
+8.  API and frontend design
+9.  Windows 11 free local setup
+10.  Implementation sequence and code structure
+11.  Agent contracts and prompt templates
+12.  Testing, security and quality controls
+13.  Four-day hour-by-hour execution plan
+14.  Demonstration and interview preparation
+15.  Troubleshooting, acceptance checklist and references
+
+Purpose, outcome and scope
+ProcureMind AI demonstrates business AI engineering through document intelligence, multi-agent workflow orchestration, deterministic decision logic and human approval. It is not a chatbot. It is a traceable workflow application in which each agent has a defined contract, uses evidence and stores its outputs.
+Target final outcome: A user can create an RFQ, add three vendors, upload quotations and a contract, extract structured commercial terms, run the analysis, compare vendors, inspect evidence, approve or override the recommendation and generate a final report.
+MVP success criteria
+Runs locally on the specified Windows 11 laptop without paid APIs.
+Processes at least three digital-text PDF quotations and one contract.
+Produces structured extraction with page-level evidence references.
+Calculates a reproducible weighted vendor score outside the LLM.
+Preserves every agent run, prompt version, evidence set and output.
+Requires a procurement manager action before the recommendation becomes final.
+Includes automated tests, sample data, architecture diagrams, screenshots and a short demo video.
+Scope boundaries
+Included in MVP
+Excluded from seven-day MVP
+Local login and two roles
+Enterprise SSO, Active Directory and multi-tenant isolation
+RFQ, vendor, quotation and contract workflows
+ERP, SAP, Coupa or supplier portal integration
+Digital PDF extraction and optional OCR fallback
+Perfect extraction from arbitrary scans and handwriting
+Local LLM agents and vector retrieval
+Paid hosted LLMs or hosted vector databases
+Deterministic scoring plus manager approval
+Autonomous purchase order issuance
+Local reports and audit trail
+Legally binding e-signatures and production compliance certification
+
+Business process and user journeys
+Personas
+Persona
+Permissions
+Primary goal
+Procurement Analyst
+Create RFQs, add vendors, upload documents, run analysis
+Prepare a complete and evidence-backed vendor evaluation.
+Procurement Manager
+Review all analysis, approve, reject or override, generate final report
+Make and document the accountable procurement decision.
+System Administrator (optional demo seed)
+Create users and inspect health information
+Maintain the local demonstration environment.
+
+End-to-end user journey
+1.  Analyst signs in and creates an RFQ with budget, dates, required items and evaluation weights.
+2.  Analyst selects or creates vendors and uploads each quotation plus relevant contract/compliance documents.
+3.  Document service extracts text, chunks content, creates embeddings and stores page metadata.
+4.  Extraction workflow converts quotation values and contract clauses into validated structured records.
+5.  Supervisor starts specialized analyses and records a run identifier.
+6.  Vendor, quotation, contract and risk agents produce evidence-linked structured outputs.
+7.  Deterministic scoring service normalizes values and computes vendor scores.
+8.  Manager reviews comparison, supporting clauses and confidence levels.
+9.  Manager approves, rejects or overrides the preferred vendor with a mandatory reason.
+10.  Report service creates a final decision report and activity log entry.
+Concept catalogue with justifications
+Concept: Multi-agent orchestration
+Meaning
+A workflow in which specialized nodes perform bounded responsibilities and communicate through shared state.
+How it is used
+LangGraph nodes represent supervisor, vendor, quotation, contract, risk and report responsibilities.
+Why this method is selected
+Specialization makes outputs testable and explainable. A graph also supports retries, branches and human review better than one long prompt.
+Trade-off / alternative
+A single prompt is faster to prototype but becomes difficult to test, observe and revise.
+
+Concept: State graph
+Meaning
+A directed workflow made of state, nodes and edges.
+How it is used
+The RFQ analysis state carries IDs, extracted facts, evidence, agent outputs, errors and approval status.
+Why this method is selected
+Explicit state prevents hidden data passing and makes each transition inspectable. LangGraph specifically models workflows through state, nodes and edges [R2].
+Trade-off / alternative
+A sequence of ordinary functions is simpler, but conditional re-analysis and approval loops become harder to maintain.
+
+Concept: Supervisor pattern
+Meaning
+A coordinator selects and sequences specialist work without doing every analysis itself.
+How it is used
+The supervisor validates prerequisites, creates the analysis plan and decides whether missing data requires a stop or re-analysis.
+Why this method is selected
+It centralizes workflow policy while keeping domain prompts small.
+Trade-off / alternative
+Uncontrolled agent-to-agent delegation can be more flexible but less predictable and more expensive.
+
+Concept: Fan-out / fan-in
+Meaning
+Independent tasks branch from one state and later merge.
+How it is used
+Vendor history, quotation comparison and contract analysis can be independent before risk aggregation.
+Why this method is selected
+It reflects real separation of concerns. On the laptop, logical parallelism can execute sequentially to control GPU memory.
+Trade-off / alternative
+True concurrent calls reduce latency on a server but can overload a small laptop GPU.
+
+Concept: Structured output
+Meaning
+The LLM must return a validated schema rather than unrestricted prose.
+How it is used
+Pydantic models define extracted terms, findings, risks, evidence and confidence.
+Why this method is selected
+Validation catches missing fields and enables direct storage, scoring and UI rendering.
+Trade-off / alternative
+Free-form prose is easier to generate but unreliable for downstream automation.
+
+Concept: Retrieval-Augmented Generation (RAG)
+Meaning
+Relevant document chunks are retrieved and supplied to the model at answer time.
+How it is used
+Contract and quotation clauses are embedded in pgvector and retrieved by question and document filters.
+Why this method is selected
+RAG grounds findings in uploaded documents and avoids sending entire PDFs into a small model context.
+Trade-off / alternative
+Fine-tuning is unnecessary for project-specific documents and requires more data and compute.
+
+Concept: Embeddings
+Meaning
+Dense numerical vectors represent semantic meaning for similarity search.
+How it is used
+nomic-embed-text creates local document and query vectors stored by pgvector.
+Why this method is selected
+A small Apache-licensed embedding model runs locally and separates retrieval from the generation model.
+Trade-off / alternative
+Keyword search is useful as a hybrid fallback but misses paraphrased clauses.
+
+Concept: Deterministic scoring
+Meaning
+A fixed mathematical function calculates the final numeric score.
+How it is used
+Normalized price, delivery, performance, compliance and contract-risk values are combined with user-defined weights.
+Why this method is selected
+The LLM explains and extracts; deterministic code calculates. This prevents arithmetic drift and improves auditability.
+Trade-off / alternative
+LLM-only scoring appears intelligent but can change between runs and cannot be independently verified.
+
+Concept: Human-in-the-loop (HITL)
+Meaning
+A person reviews and authorizes a consequential action.
+How it is used
+The manager approves, rejects or overrides the recommendation, and the workflow can resume after the decision.
+Why this method is selected
+Procurement decisions have financial and legal consequences. LangGraph highlights human oversight as a core workflow capability [R1].
+Trade-off / alternative
+Autonomous selection is inappropriate for an interview MVP and weakens accountability.
+
+Concept: Evidence provenance
+Meaning
+Every claim records where its support came from.
+How it is used
+Findings store document ID, page number, chunk ID and a short supporting excerpt.
+Why this method is selected
+Provenance allows reviewers to verify the recommendation and is essential for trustworthy document AI.
+Trade-off / alternative
+A simple answer without citations is faster but cannot be audited.
+
+Concept: Confidence calibration
+Meaning
+The system distinguishes confidence from truth.
+How it is used
+Agents return high/medium/low confidence with missing-information reasons.
+Why this method is selected
+This encourages conservative behavior when documents are incomplete.
+Trade-off / alternative
+A numeric probability would look precise but is not statistically calibrated in this MVP.
+
+Concept: Idempotency
+Meaning
+Repeating an operation does not create duplicate business effects.
+How it is used
+Document hashes prevent duplicate ingestion; analysis run IDs prevent duplicate approvals and reports.
+Why this method is selected
+Retries are common in AI workflows. Idempotency makes failure recovery safe.
+Trade-off / alternative
+Without it, a retry can duplicate chunks, reports or audit events.
+
+Concept: Audit trail
+Meaning
+Immutable records show who did what and when.
+How it is used
+Activity logs capture uploads, analysis starts, agent versions, decisions and overrides.
+Why this method is selected
+It demonstrates enterprise governance and supports interview questions about accountability.
+Trade-off / alternative
+Only application console logs are insufficient because they are not tied to business entities.
+
+Concept: Local inference
+Meaning
+Models run on the user's device rather than a paid API.
+How it is used
+Ollama serves Qwen3 4B and nomic-embed-text on Windows.
+Why this method is selected
+It satisfies zero-cost operation, keeps sample documents local and demonstrates model-provider abstraction.
+Trade-off / alternative
+Hosted models may produce better answers but introduce cost, keys and network dependency.
+
+Functional and non-functional requirements
+Functional requirements
+ID
+Requirement
+Acceptance condition
+FR-01
+Register/login and role authorization
+Analyst and manager see different actions.
+FR-02
+Create and update RFQs
+Required fields and status transitions are validated.
+FR-03
+Manage vendors and performance history
+Vendor details can be reused across RFQs.
+FR-04
+Upload quotation/contract PDFs
+File type, size, hash and owner are stored.
+FR-05
+Extract quotation fields
+Currency, totals, delivery, payment and warranty are persisted with evidence.
+FR-06
+Identify contract clauses and risks
+Findings have severity, category, explanation and page evidence.
+FR-07
+Compare all eligible submissions
+Comparison displays raw values, normalized values and score contribution.
+FR-08
+Generate recommendation
+Recommendation includes rationale, risks, alternatives and missing data.
+FR-09
+Manager approval or override
+Every final decision has an actor, timestamp and reason.
+FR-10
+Generate report
+Report can be downloaded and is linked to a finalized decision.
+FR-11
+View agent execution
+Run timeline shows status, duration, inputs and validated outputs.
+FR-12
+Search document evidence
+User can open the source page from a finding.
+
+Non-functional requirements
+Category
+Requirement
+MVP target
+Performance
+Remain usable on a laptop
+Quotation extraction under 60 seconds per digital PDF; full analysis under 5 minutes for three vendors.
+Reliability
+Safe retries
+No duplicate chunks, approvals or reports after rerun.
+Security
+Local least privilege
+JWT role checks, password hashing, upload allowlist and no secrets in source control.
+Explainability
+Evidence for material findings
+100% of contract risks and recommendation factors link to source evidence or structured vendor data.
+Reproducibility
+Pinned dependencies
+requirements.txt and package-lock.json committed.
+Observability
+Debuggable workflow
+Each node records start/end/status/error and model metadata.
+Privacy
+Local documents remain local
+No paid or external inference APIs in the default configuration.
+
+System and agent architecture
+
+ProcureMind AI logical system architecture
+Architecture justification
+Modular monolith: One FastAPI service is selected instead of microservices because it is faster to build, debug and run on a laptop. Internal packages preserve boundaries so services can be separated later.
+Relational plus vector database: PostgreSQL stores business transactions and pgvector stores embeddings in the same database. This reduces operational complexity and allows metadata joins during retrieval.
+Native Ollama: GPU inference runs directly on Windows while the database runs in Docker. This avoids GPU passthrough configuration and keeps the deployment understandable.
+Local filesystem: Uploads and generated reports use a controlled storage directory for the MVP. A storage interface allows S3 replacement later.
+REST API: REST is selected because CRUD, uploads and status polling are easy to demonstrate through Swagger and React. GraphQL is unnecessary for this bounded MVP.
+
+LangGraph workflow with an explicit human approval loop
+Agent responsibilities and contracts
+Agent
+Input
+Output
+Allowed tools
+Failure rule
+Supervisor
+RFQ ID, submissions, document status
+Analysis plan and validation issues
+Database read, workflow routing
+Stop when mandatory documents or structured values are missing.
+Vendor Intelligence
+Vendor profile and historical performance
+Performance findings and normalized reliability indicators
+Database read only
+Mark unavailable history as missing; never invent it.
+Quotation Comparison
+Structured quotation records
+Commercial comparison and anomalies
+Database read, deterministic calculator
+Reject inconsistent currencies until conversion policy is provided.
+Contract Analysis
+Retrieved contract/terms chunks
+Clause findings with page evidence
+Vector retrieval, document metadata
+No finding without evidence; low confidence on ambiguous language.
+Risk Assessment
+Vendor, quotation and contract outputs
+Risk register and mitigation suggestions
+Deterministic risk matrix
+Preserve disagreements and missing data.
+Spend Analytics
+RFQ and historic spend samples
+Budget variance and savings indicators
+Database aggregates
+No forecast beyond available sample data.
+Report Generation
+Merged validated outputs and manager decision
+Executive summary and report model
+Template renderer
+Cannot alter approved scores or decision.
+
+Document intelligence and RAG pipeline
+
+Document ingestion and evidence-grounded retrieval pipeline
+Processing steps
+1.  Validate extension, MIME type, size and cryptographic hash.
+2.  Extract text page-by-page using pypdf. Record extraction quality metrics.
+3.  When a page contains almost no text, mark it OCR_REQUIRED. Tesseract can be added as a free optional path.
+4.  Normalize whitespace but preserve page boundaries and headings.
+5.  Chunk primarily by headings/clauses, falling back to approximately 500-800 tokens with 80-token overlap.
+6.  Generate embeddings locally and store vector, document ID, page range, section and text hash.
+7.  At query time filter by RFQ, vendor and document type before semantic ranking.
+8.  Retrieve a small evidence packet and require structured citations in the agent output.
+9.  Validate every cited chunk belongs to the current RFQ and document.
+10.  Persist extraction and retrieval metrics for debugging.
+Why section-aware chunking is used
+Contracts are organized by clauses, definitions and schedules. Fixed-size chunks can split a condition from its exception. The pipeline first tries headings and paragraph boundaries, then enforces a maximum token size. This is more explainable than blindly splitting every N characters.
+Hybrid retrieval option
+For the first version, use cosine similarity plus metadata filters. Add PostgreSQL full-text search only if queries based on exact clause numbers, vendor codes or rare terms perform poorly. A weighted hybrid rank is a future improvement, not a Day 2 requirement.
+Data model and scoring design
+Core entities
+Table
+Important fields
+Purpose
+users
+id, email, password_hash, role, is_active
+Authentication and authorization.
+vendors
+id, name, country, category, compliance_status, risk_level
+Reusable supplier master.
+vendor_performance
+vendor_id, metric, value, period, source
+Historical evidence.
+rfqs
+id, number, title, budget, currency, dates, status, weights_json
+Procurement request and scoring policy.
+rfq_items
+rfq_id, description, quantity, unit, target_price
+Requested goods/services.
+vendor_submissions
+rfq_id, vendor_id, status, total, currency
+One vendor response.
+quotation_items
+submission_id, rfq_item_id, unit_price, tax, delivery_days
+Structured commercial detail.
+documents
+owner_type, owner_id, type, path, hash, parse_status
+Uploaded file registry.
+document_chunks
+document_id, page_start, page_end, text, embedding
+RAG evidence store.
+contract_findings
+document_id, category, severity, finding, evidence_chunk_id
+Persisted legal/commercial risks.
+agent_runs
+workflow, entity_id, status, started_at, completed_at, model
+Workflow observability.
+agent_outputs
+run_id, agent_name, schema_version, payload_json
+Validated node outputs.
+vendor_scores
+submission_id, factor, raw, normalized, weight, contribution
+Transparent scoring.
+recommendations
+rfq_id, run_id, preferred_vendor_id, rationale, status
+Proposed decision.
+approvals
+recommendation_id, actor_id, decision, reason, timestamp
+Human decision record.
+activity_logs
+actor_id, action, entity_type, entity_id, metadata_json
+Business audit trail.
+
+Scoring method
+A score from 0 to 100 is calculated for each vendor. User-editable weights must sum to 100. The LLM never performs the final arithmetic.
+# Example weightsprice_weight       = 30quality_weight     = 20delivery_weight    = 20compliance_weight  = 15contract_weight    = 15# Lower price is better. Guard against zero and outliers.price_score = 100 * min_valid_price / vendor_price# Lower delivery days is better.delivery_score = 100 * min_delivery_days / vendor_delivery_days# Existing indicators are normalized to 0-100.quality_score = historical_quality_ratingcompliance_score = 100 if compliant else 40 if conditional else 0contract_score = 100 - weighted_contract_risk_penaltytotal_score = (    price_score * 0.30 +    quality_score * 0.20 +    delivery_score * 0.20 +    compliance_score * 0.15 +    contract_score * 0.15)
+Important scoring safeguard: A vendor with a mandatory compliance failure is marked ineligible even if its numeric total is high. Hard constraints are evaluated before weighted ranking.
+Risk matrix
+Likelihood / Impact
+Low impact
+Medium impact
+High impact
+Low likelihood
+Low
+Low
+Medium
+Medium likelihood
+Low
+Medium
+High
+High likelihood
+Medium
+High
+Critical
+
+API and frontend design
+Primary REST endpoints
+Method and path
+Purpose
+Role
+POST /auth/login
+Return JWT access token
+Public
+GET/POST /vendors
+List or create vendors
+Analyst, Manager
+GET/POST /rfqs
+List or create RFQs
+Analyst, Manager
+PATCH /rfqs/{id}/status
+Validated lifecycle transition
+Analyst, Manager
+POST /rfqs/{id}/submissions
+Attach vendor response
+Analyst
+POST /submissions/{id}/documents
+Upload quotation or contract
+Analyst
+POST /documents/{id}/process
+Extract, chunk and embed
+Analyst
+GET /documents/{id}/findings
+Read extraction and evidence
+Analyst, Manager
+POST /rfqs/{id}/analysis-runs
+Start LangGraph workflow
+Analyst
+GET /analysis-runs/{id}
+Read node timeline and status
+Analyst, Manager
+GET /rfqs/{id}/comparison
+Return values and score contributions
+Analyst, Manager
+POST /recommendations/{id}/decision
+Approve, reject or override
+Manager
+POST /rfqs/{id}/reports
+Generate final report
+Manager
+
+Frontend pages and component hierarchy
+Page
+Key components
+Interview value
+Login
+LoginForm, validation, role redirect
+Shows basic security and user flow.
+Dashboard
+KPI cards, RFQ status chart, recent activity
+Shows product thinking rather than only APIs.
+RFQ list/detail
+RFQ form, items, workflow status
+Represents the business process.
+Vendor submission
+Vendor selector, upload cards, extraction status
+Demonstrates document workflow.
+Document evidence
+PDF/page viewer, structured facts, citations
+Makes AI grounding visible.
+Analysis run
+Agent timeline, node outputs, error/retry controls
+Shows orchestration rather than a black box.
+Vendor comparison
+Comparison matrix, score breakdown, risk badges
+Explains deterministic decision logic.
+Manager review
+Recommendation, evidence links, approve/override form
+Demonstrates HITL governance.
+Report view
+Decision summary and download action
+Completes the end-to-end workflow.
+
+Windows 11 local development setup
+This section establishes one free local environment that can be reused for both portfolio projects. Use native Ollama for GPU inference and Docker only for PostgreSQL/pgvector. This reduces Docker GPU complexity and keeps the RTX 3050 available to Ollama.
+
+Recommended deployment layout on the personal laptop
+Hardware suitability and limits
+Component
+Assessment
+Practical guidance
+Intel Core i5 12th Gen
+Suitable
+FastAPI, PostgreSQL, document parsing and React development are appropriate. Avoid large parallel batch jobs.
+NVIDIA RTX 3050 laptop GPU
+Suitable for small quantized models
+Use Qwen3 4B as the default. Use Qwen3 1.7B if the GPU has 4 GB VRAM and responses are slow or out-of-memory.
+System RAM
+16 GB recommended; 8 GB is restrictive
+Allocate no more than 4-6 GB to Docker/WSL. Close browser-heavy applications during inference.
+Disk
+At least 25 GB free
+Models, Docker images, node_modules and sample documents can consume several gigabytes.
+Thermals
+Laptop cooling matters
+Plug in the charger, use performance mode and keep ventilation clear during demos.
+
+Completely free software stack
+Tool
+Purpose
+Free-use basis
+Selected version approach
+Git for Windows
+Source control
+Free/open-source Git distribution
+Current stable installer
+Visual Studio Code
+Editor and debugger
+Free desktop editor
+Current stable; VSCodium is an open-source alternative
+Python 3.12 x64
+Backend and AI workflow
+Python Software Foundation license
+Pinned for broad package compatibility
+Node.js 24 LTS
+Frontend toolchain
+OpenJS open-source runtime
+LTS rather than Current
+React + TypeScript + Vite
+Web frontend
+Open-source packages
+Use project lock file to pin exact versions
+FastAPI + SQLAlchemy + Alembic
+API, ORM and migrations
+Open-source Python packages
+Pinned in requirements.txt
+LangGraph
+Stateful agent workflow
+Open-source orchestration framework
+Use Graph API and local checkpoint state
+PostgreSQL + pgvector
+Relational and vector storage
+Open-source database and extension
+Docker image based on PostgreSQL 17
+Ollama
+Local model runtime
+Free local runtime; model licenses vary
+Native Windows installation
+Qwen3 4B
+Local generation model
+Open model; verify model card for redistribution
+Quantized Ollama package
+nomic-embed-text
+Local embeddings
+Apache 2.0 model
+274 MB embedding model
+Docker Desktop
+Local database container
+Free for personal use, education and qualifying small organizations
+WSL2 backend; licensing must be rechecked for employer use
+pytest + Vitest
+Automated tests
+Open-source
+Unit and API tests
+ReportLab / python-docx
+Generated reports
+Open-source libraries
+Local report generation
+
+Zero-cost boundary: No OpenAI, Anthropic, hosted vector database, cloud storage, paid monitoring or paid deployment is required. Internet access is needed only to download tools and models. After setup, core demonstrations can run locally.
+Install prerequisites
+Open PowerShell as Administrator for WSL and Docker preparation. The winget package names below are convenient; use the official installer if a package is unavailable in your regional winget catalog.
+# Update Windows Package Manager metadatawinget source update# Development toolswinget install --id Git.Git -ewinget install --id Microsoft.VisualStudioCode -ewinget install --id Python.Python.3.12 -ewinget install --id OpenJS.NodeJS.LTS -ewinget install --id Docker.DockerDesktop -ewinget install --id Ollama.Ollama -e# Enable and update WSL2 for Docker Desktopwsl --installwsl --update# Restart Windows after WSL/Docker installation when requested.
+Verify the machine
+git --versionpython --versionnode --versionnpm --versiondocker --versiondocker compose versionwsl --statusnvidia-smiollama --version
+Install local AI models
+# Default generation model for the RTX 3050 laptopollama pull qwen3:4b# Fallback when VRAM or response latency is a problemollama pull qwen3:1.7b# Embedding model for pgvector retrievalollama pull nomic-embed-text# Basic testollama run qwen3:4b "Return only this JSON: {\"status\": \"ok\"}"
+RTX 3050 tuning: Start with a 4,096-token context, one concurrent model request and short agent outputs. A model file fitting on disk does not guarantee that the entire runtime fits in VRAM. Ollama may partially use system RAM, which is acceptable for a local demo but increases latency.
+Create project workspace
+mkdir C:\ai-portfoliocd C:\ai-portfoliomkdir procuremind-aicd procuremind-aigit initmkdir backend, frontend, docs, sample-data, scripts, tests, storage
+Create the PostgreSQL and pgvector service
+Save the following as docker-compose.yml in the project root. Only the database runs in Docker during development. The frontend, backend and Ollama run natively for a faster edit-run cycle.
+services:  db:    image: pgvector/pgvector:pg17    container_name: procuremind-db    environment:      POSTGRES_DB: procuremind      POSTGRES_USER: app_user      POSTGRES_PASSWORD: change_me_local    ports:      - "5432:5432"    volumes:      - pgdata:/var/lib/postgresql/data    healthcheck:      test: ["CMD-SHELL", "pg_isready -U app_user -d procuremind"]      interval: 5s      timeout: 5s      retries: 10volumes:  pgdata:
+docker compose up -d dbdocker compose psdocker compose logs db --tail 50
+Create the FastAPI backend
+cd backendpython -m venv .venv.\.venv\Scripts\Activate.ps1python -m pip install --upgrade pippip install fastapi "uvicorn[standard]" sqlalchemy psycopg[binary] alembic \  pydantic-settings python-multipart python-jose[cryptography] pwdlib[argon2] \  langgraph langchain-core ollama httpx pypdf reportlab \  pytest pytest-asyncio ruffpip freeze > requirements.txtalembic init migrations
+Recommended backend environment file (.env):
+APP_ENV=developmentDATABASE_URL=postgresql+psycopg://app_user:change_me_local@localhost:5432/procuremindJWT_SECRET=replace_with_a_long_random_local_secretJWT_ALGORITHM=HS256ACCESS_TOKEN_MINUTES=60OLLAMA_BASE_URL=http://localhost:11434OLLAMA_CHAT_MODEL=qwen3:4bOLLAMA_EMBED_MODEL=nomic-embed-textUPLOAD_DIR=../storage/uploadsREPORT_DIR=../storage/reportsLOG_LEVEL=INFO
+Create the React frontend
+cd ..\frontendnpm create vite@latest . -- --template react-tsnpm installnpm install react-router-dom @tanstack/react-query axios zod react-hook-form \  @hookform/resolvers recharts lucide-react clsx date-fnsnpm install -D vitest @testing-library/react @testing-library/jest-dom jsdom# Start the frontendnpm run dev
+Use simple CSS modules or Tailwind. For a seven-day project, do not spend half a day resolving a styling framework migration; the architecture and workflow matter more than the CSS tool.
+Recommended development start sequence
+# Terminal 1 - databasecd C:\ai-portfolio\procuremind-aidocker compose up -d db# Terminal 2 - local model server (normally Ollama is already running)ollama serve# Terminal 3 - backendcd C:\ai-portfolio\procuremind-ai\backend.\.venv\Scripts\Activate.ps1uvicorn app.main:app --reload --port 8000# Terminal 4 - frontendcd C:\ai-portfolio\procuremind-ai\frontendnpm run dev# Open# UI:       http://localhost:5173# API docs: http://localhost:8000/docs
+Laptop performance configuration
+Ollama concurrency: Run one agent LLM call at a time initially. Parallel graph nodes can be retained logically but executed sequentially on the laptop.
+Context size: Use 4K context by default. Retrieve only the top 4-6 chunks and summarize long documents before the final synthesis.
+Embedding batch: Embed 16-32 chunks per batch. Persist embeddings so documents are not reprocessed on every run.
+Database: Use HNSW only after data exceeds a few thousand chunks. Exact search is adequate for small sample data.
+Frontend: Disable unnecessary animated charts during model execution. Poll agent-run status every two seconds rather than using WebSockets in the MVP.
+Thermal stability: Use AC power and the Windows best-performance power profile for demo recordings.
+Implementation sequence and code structure
+Repository structure
+procuremind-ai/|-- backend/|   |-- app/|   |   |-- api/routes/|   |   |-- agents/|   |   |-- workflows/|   |   |-- models/|   |   |-- schemas/|   |   |-- repositories/|   |   |-- services/|   |   |-- prompts/|   |   |-- core/|   |   `-- main.py|   |-- migrations/|   |-- tests/|   `-- requirements.txt|-- frontend/|   |-- src/components/|   |-- src/pages/|   |-- src/features/|   |-- src/api/|   |-- src/types/|   `-- package.json|-- sample-data/|   |-- vendors.json|   |-- quotations/|   `-- contracts/|-- storage/uploads/|-- storage/reports/|-- docs/|-- scripts/|-- docker-compose.yml|-- .env.example`-- README.md
+Backend implementation order
+1.  Create settings, database session, health endpoint and centralized error handling.
+2.  Create user model, password hashing, JWT login and role dependency.
+3.  Create vendor, RFQ, item and submission models with Alembic migration.
+4.  Create document registry, upload validation and local storage service.
+5.  Create page extraction, chunking, embedding and pgvector repository.
+6.  Create quotation extraction schema and service.
+7.  Create contract finding schema and retrieval tools.
+8.  Create LangGraph state, nodes, edges, checkpoints and run logging.
+9.  Create deterministic normalization, eligibility and scoring service.
+10.  Create recommendation, approval and report services.
+11.  Add API tests and seed scripts before UI polish.
+Create the pgvector extension
+# Run once after the database container is healthy# PowerShell calls psql inside the container.docker exec -it procuremind-db psql -U app_user -d procuremind \  -c "CREATE EXTENSION IF NOT EXISTS vector;"
+LangGraph state sketch
+from typing import TypedDictclass ProcurementState(TypedDict, total=False):    rfq_id: str    run_id: str    submission_ids: list[str]    validation_errors: list[str]    vendor_findings: dict    quotation_comparison: dict    contract_findings: dict    risk_register: dict    scorecard: dict    recommendation: dict    approval_status: str    approval_reason: str    errors: list[dict]
+Workflow routing rules
+If required documents are unprocessed, stop with NEEDS_INPUT.
+If currencies differ and no conversion policy exists, stop quotation scoring.
+If a vendor is ineligible, keep it in comparison but exclude it from recommendation ranking.
+If an agent returns invalid structured output, retry once with validation feedback.
+If the second attempt fails, store the error and require manual review rather than silently continuing.
+After recommendation generation, interrupt the graph until the manager decision is recorded.
+On override, preserve both AI recommendation and final human decision.
+Agent contracts and prompt templates
+Contract analysis output schema
+{  "findings": [    {      "category": "termination",      "severity": "high",      "finding": "The supplier may terminate with 7 days notice.",      "business_impact": "Delivery continuity is not protected.",      "recommended_action": "Negotiate at least 30 days notice.",      "evidence": {        "document_id": "...",        "page": 8,        "chunk_id": "...",        "excerpt": "..."      },      "confidence": "high"    }  ],  "missing_clauses": ["data protection"],  "limitations": []}
+Prompt design pattern
+SYSTEM ROLEYou are the Contract Analysis Agent in a procurement decision-support system.You do not select a vendor. You identify commercial and contractual risk.BOUNDARIES- Use only the supplied evidence chunks.- Do not infer a clause that is not present.- Every material finding must cite document_id, page and chunk_id.- Mark ambiguous evidence as low confidence.- Return only the requested JSON schema.TASKReview the evidence for termination, payment, liability, warranty, penalties,renewal, confidentiality, governing law and missing mandatory clauses.EVIDENCE{{retrieved_chunks}}OUTPUT SCHEMA{{schema_json}}
+Why prompts are versioned
+Store prompt_name and prompt_version with each agent output. When results change, you can identify whether the model, evidence or instructions changed. This is an important enterprise-AI governance concept and an excellent interview discussion point.
+Testing, security and quality controls
+Test pyramid
+Level
+Examples
+Priority
+Unit
+Normalization, score calculation, eligibility rules, chunk boundaries, role checks
+Highest
+Service
+PDF extraction, embedding repository, report template
+High
+Agent contract
+Structured output validation with mocked Ollama responses
+High
+API integration
+Create RFQ, upload, analyze, approve
+High
+Frontend
+Forms, status display, manager decision validation
+Medium
+End-to-end
+One golden three-vendor demonstration
+Required before recording
+
+Critical test cases
+Duplicate PDF upload does not create duplicate chunks.
+Analysis cannot start before all selected submissions have processed quotations.
+Currency mismatch is surfaced rather than silently compared.
+Ineligible vendor cannot become the preferred recommendation.
+Every contract finding references an existing chunk in the correct document.
+Invalid agent JSON triggers one repair attempt and then a visible failure.
+Analyst cannot approve a recommendation.
+Manager override requires a reason.
+Report uses the final manager decision but retains the original AI recommendation.
+Deleting a source document is blocked after a finalized decision.
+Security checklist
+Hash passwords with Argon2; never store plaintext passwords.
+Use a long local JWT secret and exclude .env from Git.
+Validate file extension, MIME type and size; store with generated names.
+Do not render uploaded PDF content as raw HTML.
+Apply object-level authorization to every RFQ, document and report endpoint.
+Use parameterized SQL through SQLAlchemy.
+Log security-relevant actions without logging passwords, tokens or entire documents.
+Disable CORS wildcard and allow only the frontend origin in development.
+Evaluation metrics
+Metric
+How to calculate
+MVP target
+Quotation field accuracy
+Correct extracted fields / labelled fields
+At least 90% on prepared sample PDFs.
+Evidence validity
+Findings with valid page/chunk reference / all findings
+100%.
+Unsupported-claim rate
+Claims not supported by retrieved evidence / claims
+0% for material contract findings.
+Score reproducibility
+Repeated deterministic score equality
+100%.
+Workflow completion
+Golden scenarios completed without manual database edits
+3 of 3.
+Average local analysis time
+Time from run start to manager review
+Under 5 minutes for three vendors.
+
+Four-day hour-by-hour execution plan
+Day / time
+Work package
+Deliverable
+Day 1, 08:00-09:00
+Install/verify tools; create repository and issue checklist
+Working local toolchain and clean Git repository.
+Day 1, 09:00-11:00
+Database container, settings, FastAPI health and migrations
+Backend and pgvector database connected.
+Day 1, 11:00-13:00
+Users, JWT, roles and seed users
+Login APIs and protected route.
+Day 1, 14:00-17:00
+Vendor, RFQ, items and submissions
+Core CRUD with Swagger tests.
+Day 1, 17:00-19:00
+React layout, login, RFQ list/detail
+Navigable frontend foundation.
+Day 2, 08:00-10:00
+Document registry, upload validation and storage
+PDF upload and status UI.
+Day 2, 10:00-13:00
+Page extraction, cleanup and chunking
+Persisted document text and chunk metadata.
+Day 2, 14:00-16:00
+Ollama embedding client and pgvector repository
+Searchable document chunks.
+Day 2, 16:00-19:00
+Quotation extraction schema and sample PDF tuning
+Structured quotation records.
+Day 2, 19:00-20:00
+Document evidence screen
+Page evidence visible in UI.
+Day 3, 08:00-10:00
+LangGraph state, run logging, supervisor
+Workflow starts and validates inputs.
+Day 3, 10:00-13:00
+Vendor and quotation nodes
+Validated specialist outputs.
+Day 3, 14:00-17:00
+Contract and risk nodes
+Evidence-linked risks.
+Day 3, 17:00-19:00
+Eligibility, normalization and scoring
+Transparent scorecard.
+Day 3, 19:00-20:00
+Recommendation synthesis and status UI
+End-to-end analysis run.
+Day 4, 08:00-10:00
+Manager review and graph interruption/resume
+Approval, rejection and override.
+Day 4, 10:00-12:00
+Report template and audit trail
+Downloadable final report.
+Day 4, 13:00-15:00
+Golden path and error-path tests
+Stable demonstration.
+Day 4, 15:00-17:00
+UI polish, sample data and charts
+Professional portfolio appearance.
+Day 4, 17:00-19:00
+README, diagrams, screenshots and demo recording
+Interview-ready repository.
+Day 4, 19:00-20:00
+Practice explanation and tag release v0.1.0
+Confident project walkthrough.
+
+Schedule control: A working approval flow is more valuable than seven incomplete agents. If behind schedule, remove Spend Analytics first, then OCR, then advanced charts. Do not remove evidence, scoring transparency or human approval.
+Demonstration and acceptance
+Prepared sample scenario
+RFQ: 100 office laptops. Vendors Alpha, Beta and Gamma provide different prices, delivery periods, warranties and contract risks. Beta is cheapest but has a high-risk termination clause; Alpha has a higher price but stronger performance; Gamma is conditionally compliant. The platform should recommend based on configured weights while clearly showing the manager why.
+Three-minute demo script
+1.  Open the dashboard and explain that everything is running locally.
+2.  Open the RFQ and show three submissions and processed documents.
+3.  Open one extracted quotation and one contract finding with page evidence.
+4.  Start the analysis and show the agent timeline.
+5.  Open vendor comparison and explain deterministic score contributions.
+6.  Open the recommendation, inspect risk evidence and override or approve as manager.
+7.  Download the report and show the audit record.
+8.  End with architecture and one trade-off: modular monolith now, separable services later.
+Definition of done
+Fresh clone can be configured from .env.example.
+Database starts with one Docker Compose command.
+Backend and frontend start with documented commands.
+Seed script creates users, RFQ, vendors and sample history.
+At least three sample PDFs process successfully.
+Every high/critical finding has evidence.
+Approval and override permissions are enforced.
+All critical tests pass.
+README contains architecture, setup, screenshots, limitations and demo link.
+Repository has no secrets, generated models, database volumes or private documents.
+Troubleshooting guide
+Problem
+Likely cause
+Resolution
+Ollama uses CPU or is very slow
+NVIDIA driver, VRAM pressure or model too large
+Run nvidia-smi, update driver, close GPU apps, use qwen3:1.7b and reduce context.
+Docker database port 5432 is busy
+Native PostgreSQL or another container is running
+Stop the service/container or map host port 5433 and update DATABASE_URL.
+PowerShell blocks venv activation
+Execution policy restriction
+Run Set-ExecutionPolicy -Scope CurrentUser RemoteSigned, or call the venv Python directly.
+pgvector type is missing
+Extension was not created
+Execute CREATE EXTENSION vector in the project database.
+PDF has no extracted text
+Scanned document
+Use prepared digital PDFs or add Tesseract OCR as the optional fallback.
+Agent returns invalid JSON
+Model output or prompt length
+Reduce evidence, set temperature near zero, validate and retry with the validation error.
+Analysis runs out of memory
+Parallel local model calls or long context
+Execute nodes sequentially, reduce top-k and context, restart Ollama.
+Frontend cannot call API
+CORS or wrong base URL
+Allow http://localhost:5173 and verify VITE_API_BASE_URL.
+Score seems unfair
+Unnormalized inputs or weights
+Show raw, normalized and contribution columns; validate weights sum to 100.
+
+Interview explanation guide
+The project becomes valuable only when you can defend its design. Use these answers as a framework, not as memorized marketing language.
+Why LangGraph instead of a normal chain?
+The workflow contains conditional validation, specialized nodes, stored state, retries and a pause for human approval. A graph expresses these transitions explicitly. A simple chain is adequate for linear summarization but becomes fragile when the process must stop, branch, resume and preserve state.
+Why PostgreSQL and pgvector together?
+The application has strongly relational RFQs, vendors, submissions, approvals and audit events. PostgreSQL is the natural source of truth. pgvector adds semantic retrieval without operating a second database, and metadata filters can join directly to the relational entities.
+Why not let the LLM choose the vendor?
+The LLM is useful for extracting and explaining unstructured terms, but a procurement score must be reproducible. Deterministic code performs normalization, eligibility checks and arithmetic. The manager remains accountable for the final decision.
+Why use local models?
+The project has a zero-cost requirement and includes potentially sensitive documents. Local Ollama removes API charges and external data transfer. The model provider is behind an interface, so a stronger hosted model could be added later without redesigning the workflow.
+What is the main limitation?
+A 4B local model is weaker than top hosted models and arbitrary PDFs are difficult. The MVP compensates with narrow prompts, structured schemas, small evidence packets, deterministic calculations and carefully prepared test documents.
+One-minute project summary
+ProcureMind AI is a local multi-agent procurement decision-support platform. Users create an RFQ, upload quotations and contracts, and run an evidence-grounded analysis. LangGraph coordinates specialized extraction and risk agents, while PostgreSQL stores transactional data and pgvector retrieves supporting clauses. A deterministic weighted score prevents the LLM from making an untraceable vendor decision, and a manager must approve or override the recommendation. The complete MVP runs locally using Ollama, so no paid API or cloud dependency is required.
+Official references and verification notes
+The implementation choices were checked against official project documentation available on 21 July 2026. Software versions and licenses can change; verify again before commercial or employer deployment.
+1.  R1. LangGraph overview and capabilities
+2.  R2. LangGraph graph concepts: state, nodes and edges
+3.  R3. Ollama on Windows
+4.  R4. Ollama GPU hardware support
+5.  R5. Qwen3 models in the Ollama library
+6.  R6. nomic-embed-text model and Apache 2.0 license information
+7.  R7. pgvector installation and capabilities
+8.  R8. Docker Desktop licensing
+9.  R9. Docker Desktop Windows installation and WSL2 requirements
+10.  R10. Vite getting started and Node compatibility
+11.  R11. Node.js release and LTS information
+12.  R12. Python Windows downloads
+13.  R13. PostgreSQL Windows downloads
+14.  R14. FastAPI documentation
+15.  R15. React documentation

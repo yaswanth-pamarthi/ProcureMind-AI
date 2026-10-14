@@ -1,0 +1,35 @@
+[
+  {
+    "vendor": "Alpha",
+    "currency": "INR",
+    "quantity": 100,
+    "unit_price": 58000,
+    "tax": 18,
+    "total": 6844000.0,
+    "delivery_days": 20,
+    "payment": "Net 30 days",
+    "warranty_months": 30
+  },
+  {
+    "vendor": "Beta",
+    "currency": "INR",
+    "quantity": 100,
+    "unit_price": 52000,
+    "tax": 18,
+    "total": 6136000.0,
+    "delivery_days": 12,
+    "payment": "Net 30 days",
+    "warranty_months": 12
+  },
+  {
+    "vendor": "Gamma",
+    "currency": "INR",
+    "quantity": 100,
+    "unit_price": 55000,
+    "tax": 18,
+    "total": 6490000.0,
+    "delivery_days": 16,
+    "payment": "Net 30 days",
+    "warranty_months": 24
+  }
+]

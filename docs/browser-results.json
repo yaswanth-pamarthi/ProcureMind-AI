@@ -1,0 +1,20 @@
+{
+  "browser": "Playwright Chromium",
+  "pages": 9,
+  "checks": [
+    "Navigated Dashboard",
+    "Navigated RFQs",
+    "Navigated Vendors",
+    "PDF page evidence viewer rendered",
+    "Navigated Documents & evidence",
+    "Seven-agent completed workflow visible",
+    "Navigated Agent analysis",
+    "Navigated Vendor comparison",
+    "Navigated Manager review",
+    "Browser PDF report download passed",
+    "Navigated Reports",
+    "Navigated Audit trail"
+  ],
+  "javascript_errors": [],
+  "passed": true
+}
