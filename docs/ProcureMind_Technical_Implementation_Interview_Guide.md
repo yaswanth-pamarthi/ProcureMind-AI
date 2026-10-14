@@ -118,7 +118,7 @@ How implemented: pytest exercises domain safeguards, authentication and evidence
 
 Purpose: Repeatable local operation and source control.
 
-How implemented: Docker runs only the database; backend, frontend and Ollama run natively. PowerShell Setup, Start, Stop, Doctor and Test scripts keep commands repeatable and log launcher processes. Git excludes models, .env, uploads, reports, databases and dependency directories. This arrangement follows the laptop architecture in the supplied implementation guides.
+How implemented: The original development launcher runs the database in Docker and native API/UI/Ollama processes. A separately verified compose.deploy.yml now runs the backend, Nginx-served production frontend and database in containers, with non-root application users, health checks and persistent volumes. Ollama remains a reachable private host service. Git excludes models, .env, uploads, reports, databases and dependency directories. Source repositories are public; this is local container deployment, not public cloud hosting.
 
 ## 3. Architecture and important data boundaries
 
@@ -340,6 +340,16 @@ Both projects can run together without port collisions. Procurement uses databas
 For manual startup, run docker compose up -d --wait db in the root; run backend/.venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 from backend; run npm run dev from frontend. Environment examples contain placeholders, while scripts/configure.py generates local random secrets. The private LOGIN.txt lists the actual local accounts without exposing passwords in source or screenshots.
 
 ## 10. Measured validation and acceptance evidence
+
+Public source repository: https://github.com/yaswanth-pamarthi/ProcureMind-AI. Verified Docker interface: http://localhost:15173. API documentation: http://localhost:15173/api/docs. Deployment checks include three healthy containers, production-built frontend assets, real inference workflow completion and report download. See docs/DEPLOYMENT.md for clean-checkout commands and docs/deployment-results.json for evidence. Public cloud hosting remains outstanding.
+
+```
+docker compose -f compose.deploy.yml up -d --build --wait
+docker compose -f compose.deploy.yml exec api python /app/scripts/seed.py
+docker compose -f compose.deploy.yml exec api python -m pytest -q
+```
+
+Container pytest passed 39 tests with 3 host-path fixtures skipped. Those fixtures pass in the full native test suite; the combined host backend/frontend total is 79 passing tests. Container evidence does not inflate that count.
 
 | Executed path | Status | Agents | Analysis seconds | Model |
 | --- | --- | --- | --- | --- |
